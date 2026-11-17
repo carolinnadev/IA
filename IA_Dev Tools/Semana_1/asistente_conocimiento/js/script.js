@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userInput = document.getElementById('userInput');
     const chatBody = document.getElementById('chatBody');
 
-    // Base de conocimiento simulada con fuentes RAG
+    // Base de conocimiento simulada con fuentes RAG (Explicabilidad)
     const guiasDelCurso = [
         {
             tema: "reglas",
@@ -24,30 +24,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
     chatForm.addEventListener('submit', procesarConsulta);
 
+    // ==========================================
+    // 1. REGLA ÉTICA: Anonimización (Ley 1581)
+    // ==========================================
+    function anonimizarDatos(texto) {
+        let textoLimpio = texto;
+        const regexEmail = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+        const regexTelefono = /\b(\+57\s?)?3\d{9}\b/g;
+        const regexCedula = /\b\d{7,10}\b/g;
+
+        textoLimpio = textoLimpio.replace(regexEmail, '[CORREO_OCULTO]');
+        textoLimpio = textoLimpio.replace(regexTelefono, '[TELÉFONO_OCULTO]');
+        textoLimpio = textoLimpio.replace(regexCedula, '[DATO_PRIVADO_OCULTO]');
+
+        return textoLimpio;
+    }
+
     function procesarConsulta(e) {
         e.preventDefault();
-        const query = userInput.value.trim().toLowerCase();
+        const rawInput = userInput.value.trim();
+        if (!rawInput) return;
 
-        if (!query) return;
+        // Limpiamos datos sensibles antes de procesar
+        const inputLimpio = anonimizarDatos(rawInput);
+        const query = inputLimpio.toLowerCase();
 
-        // 1. Mostrar mensaje del usuario
-        appendMessage(userInput.value, 'user');
+        appendMessage(inputLimpio, 'user');
         userInput.value = '';
 
-        // 2. Mostrar estado de CARGA ("Pensando...")
         const loadingId = appendLoadingIndicator();
 
-        // Simulación del tiempo de latencia de la IA
         setTimeout(() => {
             removeLoadingIndicator(loadingId);
 
-            // Regla administrativa / Humano (H)
-            if (query.includes('nota') || query.includes('asistencia') || query.includes('falta') || query.includes('examen')) {
-                appendMessage('Esta consulta sobre registros oficiales requiere derivación a revisión humana.', 'bot', 'H');
+            // ==========================================
+            // 2. REGLA ÉTICA: Control de Alto Impacto
+            // ==========================================
+            const temasAltoImpacto = ['nota', 'calificacion', 'asistencia', 'falta', 'salud', 'expulsion', 'cancelar'];
+            const esAltoImpacto = temasAltoImpacto.some(word => query.includes(word));
+
+            if (esAltoImpacto) {
+                appendMessage('<strong>[Control Humano]</strong> Este tema académico o crítico requiere revisión de un tutor. Por ética, la IA no puede decidir sobre esto.', 'bot', 'H');
                 return;
             }
 
-            // Búsqueda en la base de conocimiento (Simulando RAG / Modelo M)
+            // Búsqueda RAG normal (Modelo M)
             let respuestaEncontrada = guiasDelCurso.find(guia => query.includes(guia.tema));
 
             if (respuestaEncontrada) {
@@ -57,8 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>`;
                 appendMessage(mensajeConFuente, 'bot', 'M', true);
             } else {
-                // Estado de Error / Honestidad (No sé)
-                const mensajeError = `Lo siento, no encontré información exacta sobre "${query}" en las guías actuales. ¿Deseas reportar este vacío o hablar con un coach?`;
+                // Estado de Error / Honestidad
+                const mensajeError = `Lo siento, no encontré información exacta sobre "${query}" en las guías. Para evitar alucinaciones, prefiero avisarte. ¿Deseas hablar con un coach?`;
                 appendMessage(mensajeError, 'bot', 'H');
             }
         }, 800);
@@ -73,12 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tagType === 'M') tagHTML = '<span class="message-tag tag-m">Modelo M</span><br>';
         if (tagType === 'H') tagHTML = '<span class="message-tag tag-h">Humano H</span><br>';
 
-        if (isHtml) {
-            msgNode.innerHTML = `${tagHTML}${text}`;
-        } else {
-            msgNode.innerHTML = `${tagHTML}${text}`;
-        }
-
+        msgNode.innerHTML = `${tagHTML}${text}`;
         chatBody.appendChild(msgNode);
         chatBody.scrollTop = chatBody.scrollHeight;
     }
@@ -92,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="message-tag tag-m">Modelo M</span><br>
             <div class="loading-indicator">
                 <div class="spinner"></div>
-                <span>Pensando y consultando documentos...</span>
+                <span>Pensando y consultando fuentes...</span>
             </div>
         `;
         chatBody.appendChild(loadingNode);
